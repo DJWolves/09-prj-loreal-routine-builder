@@ -1,6 +1,11 @@
 /* Get references to DOM elements */
 const productSearch = document.getElementById("productSearch");
 const categoryFilter = document.getElementById("categoryFilter");
+const categoryDropdown = document.getElementById("categoryDropdown");
+const categoryDropdownTrigger = document.getElementById(
+  "categoryDropdownTrigger",
+);
+const categoryDropdownMenu = document.getElementById("categoryDropdownMenu");
 const productsContainer = document.getElementById("productsContainer");
 const selectedProductsList = document.getElementById("selectedProductsList");
 const deselectAllButton = document.getElementById("deselectAll");
@@ -221,6 +226,55 @@ function trimChatHistory() {
   }
 }
 
+/* Build custom category options from the hidden native select */
+function buildCustomCategoryDropdown() {
+  const optionsHtml = Array.from(categoryFilter.options)
+    .filter((option) => option.value !== "")
+    .map(
+      (option) => `
+      <button
+        class="category-dropdown-option"
+        type="button"
+        role="option"
+        data-value="${option.value}"
+      >
+        ${option.textContent}
+      </button>
+    `,
+    )
+    .join("");
+
+  categoryDropdownMenu.innerHTML = optionsHtml;
+}
+
+/* Keep custom dropdown label/active state in sync with selected category */
+function syncCustomCategoryDropdown() {
+  const selectedOption = Array.from(categoryFilter.options).find(
+    (option) => option.value === categoryFilter.value,
+  );
+
+  categoryDropdownTrigger.textContent = selectedOption
+    ? selectedOption.textContent
+    : "Choose a Category";
+
+  const optionButtons = categoryDropdownMenu.querySelectorAll(
+    ".category-dropdown-option",
+  );
+
+  optionButtons.forEach((button) => {
+    button.classList.toggle(
+      "active-option",
+      button.dataset.value === categoryFilter.value,
+    );
+  });
+}
+
+/* Open or close custom dropdown */
+function setCategoryDropdownOpenState(isOpen) {
+  categoryDropdown.classList.toggle("open", isOpen);
+  categoryDropdownTrigger.setAttribute("aria-expanded", String(isOpen));
+}
+
 /* Reset chat to default messages */
 function resetChatHistory() {
   chatHistory.length = 0;
@@ -326,7 +380,9 @@ function renderFilteredProducts() {
     const searchableText =
       `${product.name} ${product.brand} ${product.category} ${product.description}`.toLowerCase();
 
-    const matchesSearch = searchTerm ? searchableText.includes(searchTerm) : true;
+    const matchesSearch = searchTerm
+      ? searchableText.includes(searchTerm)
+      : true;
 
     return matchesCategory && matchesSearch;
   });
@@ -342,6 +398,7 @@ async function initializeApp() {
 
   categoryFilter.value = savedPreferences.selectedCategory;
   productSearch.value = savedPreferences.searchTerm;
+  syncCustomCategoryDropdown();
 
   selectedProductIds = savedPreferences.selectedProductIds.filter((savedId) =>
     allProducts.some((product) => product.id === savedId),
@@ -354,8 +411,37 @@ async function initializeApp() {
 
 /* Filter and display products when category changes */
 categoryFilter.addEventListener("change", () => {
+  syncCustomCategoryDropdown();
   renderFilteredProducts();
   savePreferences();
+});
+
+/* Toggle category dropdown open/closed */
+categoryDropdownTrigger.addEventListener("click", () => {
+  const isOpen = categoryDropdown.classList.contains("open");
+  setCategoryDropdownOpenState(!isOpen);
+});
+
+/* Select category from custom dropdown */
+categoryDropdownMenu.addEventListener("click", (e) => {
+  const clickedOption = e.target.closest(".category-dropdown-option");
+
+  if (!clickedOption) {
+    return;
+  }
+
+  categoryFilter.value = clickedOption.dataset.value;
+  syncCustomCategoryDropdown();
+  setCategoryDropdownOpenState(false);
+  renderFilteredProducts();
+  savePreferences();
+});
+
+/* Close dropdown when user clicks outside */
+document.addEventListener("click", (e) => {
+  if (!categoryDropdown.contains(e.target)) {
+    setCategoryDropdownOpenState(false);
+  }
 });
 
 /* Filter products when user types in search input */
@@ -473,6 +559,7 @@ clearChatButton.addEventListener("click", () => {
   resetChatHistory();
 });
 
+buildCustomCategoryDropdown();
 initializeApp();
 renderChatFromHistory();
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -25,14 +25,34 @@
 
       <!-- Category Filter -->
       <div class="search-section">
-        <label for="productSearch" class="visually-hidden">Search Products</label>
+        <label for="productSearch" class="visually-hidden"
+          >Search Products</label
+        >
         <input
           id="productSearch"
           type="text"
           placeholder="Search products by name or brand"
           autocomplete="off"
         />
-        <select id="categoryFilter">
+        <div class="category-dropdown" id="categoryDropdown">
+          <button
+            id="categoryDropdownTrigger"
+            class="category-dropdown-trigger"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+          >
+            Choose a Category
+          </button>
+          <div
+            id="categoryDropdownMenu"
+            class="category-dropdown-menu"
+            role="listbox"
+            aria-label="Category options"
+          ></div>
+        </div>
+
+        <select id="categoryFilter" class="native-category-filter">
           <option value="" disabled selected>Choose a Category</option>
           <option value="cleanser">Cleansers</option>
           <option value="skincare">Skincare</option>
