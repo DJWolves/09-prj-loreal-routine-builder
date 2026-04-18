@@ -33,6 +33,8 @@ const descriptionModalText = document.getElementById("descriptionModalText");
 /* Save selected category + products in localStorage */
 const PREFERENCES_KEY = "routineBuilderPreferences";
 const CHAT_HISTORY_KEY = "routineBuilderChatHistory";
+const OPENAI_WORKER_URL =
+  "https://08-loreal-chat-bot.asiaetienne15.workers.dev/";
 
 /* Keep chat history so the assistant can refer to past messages */
 const SYSTEM_PROMPT =
@@ -563,7 +565,7 @@ buildCustomCategoryDropdown();
 initializeApp();
 renderChatFromHistory();
 
-/* Ask OpenAI for a routine or product advice */
+/* Ask the Cloudflare Worker for a routine or product advice */
 async function getOpenAIResponse(userMessage) {
   const selectedProductsContext = allProducts
     .filter((product) => selectedProductIds.includes(product.id))
@@ -580,20 +582,18 @@ async function getOpenAIResponse(userMessage) {
     },
   ];
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch(OPENAI_WORKER_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o",
       messages: messagesForApi,
     }),
   });
 
   if (!response.ok) {
-    throw new Error("OpenAI request failed");
+    throw new Error("Cloudflare Worker request failed");
   }
 
   const data = await response.json();
@@ -613,17 +613,6 @@ chatForm.addEventListener("submit", async (e) => {
   chatHistory.push({ role: "user", content: message });
   trimChatHistory();
   saveChatHistory();
-
-  if (typeof OPENAI_API_KEY === "undefined" || !OPENAI_API_KEY) {
-    chatHistory.push({
-      role: "assistant",
-      content: "Add your OpenAI key in secrets.js first.",
-    });
-    trimChatHistory();
-    saveChatHistory();
-    appendChatLine("assistant", "Add your OpenAI key in secrets.js first.");
-    return;
-  }
 
   appendChatLine("user", message);
   userInput.value = "";

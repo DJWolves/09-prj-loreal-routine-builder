@@ -3,23 +3,23 @@
 export default {
   async fetch(request, env) {
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Content-Type': 'application/json'
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Content-Type": "application/json",
     };
 
     // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
+    if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
-    const apiKey = env.OPENAI_API_KEY; // Make sure to name your secret OPENAI_API_KEY in the Cloudflare Workers dashboard
-    const apiUrl = 'https://api.openai.com/v1/chat/completions';
-    const userInput = await request.json();
+    const apiKey = env.OPENAI_API_KEY; // Store this secret in Cloudflare Workers, not in the browser
+    const apiUrl = "https://api.openai.com/v1/chat/completions";
+    const incomingBody = await request.json();
 
     const systemMessage = {
-      role: 'system',
+      role: "system",
       content: `Suggest items from this website
 
 You are a specialized beauty assistant focused exclusively on L’Oréal products and services. Your role is to provide accurate, helpful, and concise information about L’Oréal brands, products, ingredients, routines, and personalized recommendations.
@@ -53,29 +53,29 @@ If a request is unrelated to L’Oréal, respond with:
 “I’m here to help with L’Oréal products and routines. Let me know your beauty goals, and I’ll recommend something from L’Oréal.”
 
 
-Stay within this scope at all times.`
+Stay within this scope at all times.`,
     };
 
     const requestBody = {
-      model: 'gpt-4o',
+      model: "gpt-4o",
       messages: [
         systemMessage,
-        ...(Array.isArray(userInput.messages) ? userInput.messages : [])
+        ...(Array.isArray(incomingBody.messages) ? incomingBody.messages : []),
       ],
       max_tokens: 300,
     };
 
     const response = await fetch(apiUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();
 
     return new Response(JSON.stringify(data), { headers: corsHeaders });
-  }
+  },
 };
