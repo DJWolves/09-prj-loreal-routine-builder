@@ -25,9 +25,17 @@
 
       <!-- Category Filter -->
       <div class="search-section">
+        <label for="productSearch" class="visually-hidden">Search Products</label>
+        <input
+          id="productSearch"
+          type="text"
+          placeholder="Search products by name or brand"
+          autocomplete="off"
+        />
         <select id="categoryFilter">
           <option value="" disabled selected>Choose a Category</option>
           <option value="cleanser">Cleansers</option>
+          <option value="skincare">Skincare</option>
           <option value="moisturizer">Moisturizers & Treatments</option>
           <option value="haircare">Haircare</option>
           <option value="makeup">Makeup</option>
@@ -46,6 +54,9 @@
       <div class="selected-products">
         <h2>Selected Products</h2>
         <div id="selectedProductsList"></div>
+        <button id="deselectAll" class="deselect-btn" type="button">
+          Deselect All
+        </button>
         <button id="generateRoutine" class="generate-btn">
           <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Routine
         </button>
@@ -53,7 +64,12 @@
 
       <!------- Chat Area ------->
       <section class="chatbox">
-        <h2>Let's Build Your Routine</h2>
+        <div class="chat-header-row">
+          <h2>Let's Build Your Routine</h2>
+          <button id="clearChat" class="clear-chat-btn" type="button">
+            Clear Chat
+          </button>
+        </div>
         <div id="chatWindow" class="chat-window"></div>
 
         <form id="chatForm" class="chat-form">

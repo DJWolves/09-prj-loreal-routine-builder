@@ -40,8 +40,11 @@ body {
 .search-section {
   margin: 30px 0;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
+.search-section input,
 .search-section select {
   width: 100%;
   padding: 16px;
@@ -53,6 +56,7 @@ body {
   font-weight: 500;
 }
 
+.search-section input:focus,
 .search-section select:focus {
   outline: none;
   border-color: #666;
@@ -68,7 +72,28 @@ body {
 
 .chatbox h2 {
   font-size: 20px;
+}
+
+.chat-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.clear-chat-btn {
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.clear-chat-btn:hover {
+  background: #f2f2f2;
 }
 
 .chat-window {
@@ -350,6 +375,28 @@ body {
   font-size: 14px;
 }
 
+.deselect-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #000;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.deselect-btn:hover:not(:disabled) {
+  background: #f2f2f2;
+}
+
+.deselect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .generate-btn {
   width: 100%;
   margin-top: 20px;
@@ -370,4 +417,79 @@ body {
 
 .generate-btn i {
   margin-right: 8px;
+}
+
+/* mobile layout */
+@media (max-width: 768px) {
+  .page-wrapper {
+    width: 94%;
+  }
+
+  .site-header,
+  .search-section,
+  .selected-products,
+  .chatbox,
+  .site-footer {
+    text-align: center;
+  }
+
+  .products-grid {
+    justify-content: center;
+  }
+
+  .product-card {
+    flex: 1 1 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .product-card img {
+    width: 120px;
+    height: 120px;
+  }
+
+  .product-card .product-info {
+    align-items: center;
+  }
+
+  #selectedProductsList {
+    justify-content: center;
+  }
+
+  .chat-window {
+    align-items: center;
+  }
+
+  .chat-line {
+    max-width: 95%;
+  }
+
+  .assistant-line,
+  .user-line {
+    align-self: center;
+    text-align: center;
+  }
+
+  .chat-form {
+    justify-content: center;
+  }
+
+  .chat-header-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .chat-form input {
+    text-align: center;
+  }
+
+  .site-footer nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }

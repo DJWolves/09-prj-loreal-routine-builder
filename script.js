@@ -1,10 +1,13 @@
 /* Get references to DOM elements */
+const productSearch = document.getElementById("productSearch");
 const categoryFilter = document.getElementById("categoryFilter");
 const productsContainer = document.getElementById("productsContainer");
 const selectedProductsList = document.getElementById("selectedProductsList");
+const deselectAllButton = document.getElementById("deselectAll");
 const generateRoutineButton = document.getElementById("generateRoutine");
 const chatForm = document.getElementById("chatForm");
 const chatWindow = document.getElementById("chatWindow");
+const clearChatButton = document.getElementById("clearChat");
 const userInput = document.getElementById("userInput");
 
 /* Build a reusable description popup once */
@@ -61,6 +64,7 @@ function getSavedPreferences() {
   if (!saved) {
     return {
       selectedCategory: "",
+      searchTerm: "",
       selectedProductIds: [],
     };
   }
@@ -70,6 +74,7 @@ function getSavedPreferences() {
 
     return {
       selectedCategory: parsed.selectedCategory || "",
+      searchTerm: parsed.searchTerm || "",
       selectedProductIds: Array.isArray(parsed.selectedProductIds)
         ? parsed.selectedProductIds
         : [],
@@ -77,6 +82,7 @@ function getSavedPreferences() {
   } catch (error) {
     return {
       selectedCategory: "",
+      searchTerm: "",
       selectedProductIds: [],
     };
   }
@@ -86,6 +92,7 @@ function getSavedPreferences() {
 function savePreferences() {
   const preferences = {
     selectedCategory: categoryFilter.value || "",
+    searchTerm: productSearch.value || "",
     selectedProductIds,
   };
 
@@ -214,6 +221,24 @@ function trimChatHistory() {
   }
 }
 
+/* Reset chat to default messages */
+function resetChatHistory() {
+  chatHistory.length = 0;
+  chatHistory.push(
+    {
+      role: "system",
+      content: SYSTEM_PROMPT,
+    },
+    {
+      role: "assistant",
+      content: DEFAULT_ASSISTANT_GREETING,
+    },
+  );
+
+  saveChatHistory();
+  renderChatFromHistory();
+}
+
 /* Create HTML for displaying product cards */
 function displayProducts(products) {
   if (products.length === 0) {
@@ -229,7 +254,17 @@ function displayProducts(products) {
     <div class="product-card ${
       selectedProductIds.includes(product.id) ? "selected-card" : ""
     }" data-id="${product.id}">
-      <img src="${product.image}" alt="${product.name}">
+      <img
+        src="${product.image}"
+        alt="${product.name}"
+        ${
+          product.id === 15
+            ? `onerror="this.onerror=null;this.src='img/revitalift.jpg';"`
+            : product.id === 13
+              ? `onerror="this.onerror=null;this.src='img/mineral-89.avif';"`
+              : ""
+        }
+      >
       <div class="product-info">
         <h3>${product.name}</h3>
         <p>${product.brand}</p>
@@ -251,6 +286,7 @@ function renderSelectedProducts() {
     selectedProductsList.innerHTML = `
       <div class="placeholder-message">No products selected yet</div>
     `;
+    deselectAllButton.disabled = true;
     return;
   }
 
@@ -261,13 +297,16 @@ function renderSelectedProducts() {
     `,
     )
     .join("");
+
+  deselectAllButton.disabled = false;
 }
 
 /* Filter products based on selected category */
 function renderFilteredProducts() {
   const selectedCategory = categoryFilter.value;
+  const searchTerm = productSearch.value.trim().toLowerCase();
 
-  if (!selectedCategory) {
+  if (!selectedCategory && !searchTerm) {
     productsContainer.innerHTML = `
       <div class="placeholder-message">
         Select a category to view products
@@ -276,9 +315,21 @@ function renderFilteredProducts() {
     return;
   }
 
-  const filteredProducts = allProducts.filter(
-    (product) => product.category === selectedCategory,
-  );
+  const filteredProducts = allProducts.filter((product) => {
+    /* If user is searching, search across all categories */
+    const matchesCategory = searchTerm
+      ? true
+      : selectedCategory
+        ? product.category === selectedCategory
+        : true;
+
+    const searchableText =
+      `${product.name} ${product.brand} ${product.category} ${product.description}`.toLowerCase();
+
+    const matchesSearch = searchTerm ? searchableText.includes(searchTerm) : true;
+
+    return matchesCategory && matchesSearch;
+  });
 
   displayProducts(filteredProducts);
 }
@@ -290,6 +341,7 @@ async function initializeApp() {
   const savedPreferences = getSavedPreferences();
 
   categoryFilter.value = savedPreferences.selectedCategory;
+  productSearch.value = savedPreferences.searchTerm;
 
   selectedProductIds = savedPreferences.selectedProductIds.filter((savedId) =>
     allProducts.some((product) => product.id === savedId),
@@ -302,6 +354,12 @@ async function initializeApp() {
 
 /* Filter and display products when category changes */
 categoryFilter.addEventListener("change", () => {
+  renderFilteredProducts();
+  savePreferences();
+});
+
+/* Filter products when user types in search input */
+productSearch.addEventListener("input", () => {
   renderFilteredProducts();
   savePreferences();
 });
@@ -400,6 +458,19 @@ generateRoutineButton.addEventListener("click", () => {
   chatHistory.push({ role: "assistant", content: routineMessage });
   trimChatHistory();
   saveChatHistory();
+});
+
+/* Clear all selected products with one click */
+deselectAllButton.addEventListener("click", () => {
+  selectedProductIds = [];
+  renderFilteredProducts();
+  renderSelectedProducts();
+  savePreferences();
+});
+
+/* Clear all chat messages with one click */
+clearChatButton.addEventListener("click", () => {
+  resetChatHistory();
 });
 
 initializeApp();
