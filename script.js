@@ -29,8 +29,7 @@ const CHAT_HISTORY_KEY = "routineBuilderChatHistory";
 /* Keep chat history so the assistant can refer to past messages */
 const SYSTEM_PROMPT =
   "You are a beginner-friendly beauty routine assistant. Keep answers short, practical, and clear.";
-const DEFAULT_ASSISTANT_GREETING =
-  "Hi! Ask me about your products or routine.";
+const DEFAULT_ASSISTANT_GREETING = "Hi! Ask me about your products or routine.";
 const chatHistory = getSavedChatHistory();
 
 /* Keep product data and selected products in memory while app is open */
@@ -191,11 +190,14 @@ function appendChatLine(role, message) {
 
 /* Rebuild visible chat from saved history */
 function renderChatFromHistory() {
-  const visibleMessages = chatHistory.filter((message) => message.role !== "system");
+  const visibleMessages = chatHistory.filter(
+    (message) => message.role !== "system",
+  );
 
   chatWindow.innerHTML = visibleMessages
     .map((message) => {
-      const className = message.role === "user" ? "user-line" : "assistant-line";
+      const className =
+        message.role === "user" ? "user-line" : "assistant-line";
       return `<div class="chat-line ${className}">${escapeHtml(message.content).replaceAll("\n", "<br>")}</div>`;
     })
     .join("");
@@ -366,7 +368,8 @@ generateRoutineButton.addEventListener("click", () => {
   if (selectedProducts.length === 0) {
     chatHistory.push({
       role: "assistant",
-      content: "Select at least one product first, then click Generate Routine.",
+      content:
+        "Select at least one product first, then click Generate Routine.",
     });
     trimChatHistory();
     saveChatHistory();
