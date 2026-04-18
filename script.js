@@ -5,6 +5,7 @@ const selectedProductsList = document.getElementById("selectedProductsList");
 const generateRoutineButton = document.getElementById("generateRoutine");
 const chatForm = document.getElementById("chatForm");
 const chatWindow = document.getElementById("chatWindow");
+const userInput = document.getElementById("userInput");
 
 /* Build a reusable description popup once */
 const descriptionModal = document.createElement("div");
@@ -23,6 +24,14 @@ const descriptionModalText = document.getElementById("descriptionModalText");
 
 /* Save selected category + products in localStorage */
 const PREFERENCES_KEY = "routineBuilderPreferences";
+const CHAT_HISTORY_KEY = "routineBuilderChatHistory";
+
+/* Keep chat history so the assistant can refer to past messages */
+const SYSTEM_PROMPT =
+  "You are a beginner-friendly beauty routine assistant. Keep answers short, practical, and clear.";
+const DEFAULT_ASSISTANT_GREETING =
+  "Hi! Ask me about your products or routine.";
+const chatHistory = getSavedChatHistory();
 
 /* Keep product data and selected products in memory while app is open */
 let allProducts = [];
@@ -84,6 +93,71 @@ function savePreferences() {
   localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
 }
 
+/* Read chat history from localStorage */
+function getSavedChatHistory() {
+  const defaultHistory = [
+    {
+      role: "system",
+      content: SYSTEM_PROMPT,
+    },
+    {
+      role: "assistant",
+      content: DEFAULT_ASSISTANT_GREETING,
+    },
+  ];
+
+  const saved = localStorage.getItem(CHAT_HISTORY_KEY);
+
+  if (!saved) {
+    return defaultHistory;
+  }
+
+  try {
+    const parsed = JSON.parse(saved);
+
+    if (!Array.isArray(parsed)) {
+      return defaultHistory;
+    }
+
+    const validMessages = parsed.filter(
+      (message) =>
+        message &&
+        typeof message.role === "string" &&
+        typeof message.content === "string" &&
+        ["system", "user", "assistant"].includes(message.role),
+    );
+
+    const hasSystemPromptAtTop =
+      validMessages[0] && validMessages[0].role === "system";
+
+    const historyWithSystem = hasSystemPromptAtTop
+      ? validMessages
+      : [
+          {
+            role: "system",
+            content: SYSTEM_PROMPT,
+          },
+          ...validMessages,
+        ];
+
+    if (historyWithSystem.length === 1) {
+      historyWithSystem.push({
+        role: "assistant",
+        content: DEFAULT_ASSISTANT_GREETING,
+      });
+    }
+
+    return historyWithSystem;
+  } catch (error) {
+    return defaultHistory;
+  }
+}
+
+/* Save chat history so it can be restored after refresh */
+function saveChatHistory() {
+  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
+}
+
 /* Escape text before inserting into HTML attributes like title */
 function escapeAttributeText(text) {
   return String(text)
@@ -91,6 +165,51 @@ function escapeAttributeText(text) {
     .replaceAll('"', "&quot;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+/* Escape text before rendering inside chat */
+function escapeHtml(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+/* Append one message to the chat window */
+function appendChatLine(role, message) {
+  const className = role === "user" ? "user-line" : "assistant-line";
+  const messageHtml = `
+    <div class="chat-line ${className}">${escapeHtml(message).replaceAll(
+      "\n",
+      "<br>",
+    )}</div>
+  `;
+
+  chatWindow.innerHTML += messageHtml;
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+/* Rebuild visible chat from saved history */
+function renderChatFromHistory() {
+  const visibleMessages = chatHistory.filter((message) => message.role !== "system");
+
+  chatWindow.innerHTML = visibleMessages
+    .map((message) => {
+      const className = message.role === "user" ? "user-line" : "assistant-line";
+      return `<div class="chat-line ${className}">${escapeHtml(message.content).replaceAll("\n", "<br>")}</div>`;
+    })
+    .join("");
+
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+/* Keep history small and focused */
+function trimChatHistory() {
+  const nonSystemMessages = chatHistory.slice(1);
+
+  if (nonSystemMessages.length > 12) {
+    chatHistory.splice(1, nonSystemMessages.length - 12);
+  }
 }
 
 /* Create HTML for displaying product cards */
@@ -245,8 +364,16 @@ generateRoutineButton.addEventListener("click", () => {
   );
 
   if (selectedProducts.length === 0) {
-    chatWindow.innerHTML =
-      "Select at least one product first, then click Generate Routine.";
+    chatHistory.push({
+      role: "assistant",
+      content: "Select at least one product first, then click Generate Routine.",
+    });
+    trimChatHistory();
+    saveChatHistory();
+    appendChatLine(
+      "assistant",
+      "Select at least one product first, then click Generate Routine.",
+    );
     return;
   }
 
@@ -257,21 +384,40 @@ generateRoutineButton.addEventListener("click", () => {
     )
     .join("");
 
-  chatWindow.innerHTML = `
-    <p><strong>Your Routine:</strong></p>
-    <ol>${routineSteps}</ol>
-    <p>Tip: Use products in the order shown, from lightest to richest texture.</p>
-  `;
+  const routineMessage = `Your Routine:\n${selectedProducts
+    .map(
+      (product, index) =>
+        `Step ${index + 1}: ${product.brand} - ${product.name}`,
+    )
+    .join(
+      "\n",
+    )}\n\nTip: Use products in the order shown, from lightest to richest texture.`;
+
+  appendChatLine("assistant", routineMessage);
+  chatHistory.push({ role: "assistant", content: routineMessage });
+  trimChatHistory();
+  saveChatHistory();
 });
 
 initializeApp();
+renderChatFromHistory();
 
 /* Ask OpenAI for a routine or product advice */
 async function getOpenAIResponse(userMessage) {
-  const selectedProducts = allProducts
+  const selectedProductsContext = allProducts
     .filter((product) => selectedProductIds.includes(product.id))
     .map((product) => `${product.brand} - ${product.name}`)
     .join("\n");
+
+  const contextualUserMessage = `${userMessage}\n\nSelected products:\n${selectedProductsContext || "None selected yet."}`;
+
+  const messagesForApi = [
+    ...chatHistory,
+    {
+      role: "user",
+      content: contextualUserMessage,
+    },
+  ];
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -281,17 +427,7 @@ async function getOpenAIResponse(userMessage) {
     },
     body: JSON.stringify({
       model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a beginner-friendly beauty routine assistant. Keep answers short, practical, and clear.",
-        },
-        {
-          role: "user",
-          content: `User message: ${userMessage}\n\nSelected products:\n${selectedProducts || "None selected yet."}`,
-        },
-      ],
+      messages: messagesForApi,
     }),
   });
 
@@ -307,27 +443,44 @@ async function getOpenAIResponse(userMessage) {
 /* Chat form submission handler */
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-
-  const userInput = document.getElementById("userInput");
   const message = userInput.value.trim();
 
   if (!message) {
     return;
   }
 
+  chatHistory.push({ role: "user", content: message });
+  trimChatHistory();
+  saveChatHistory();
+
   if (typeof OPENAI_API_KEY === "undefined" || !OPENAI_API_KEY) {
-    chatWindow.innerHTML = "Add your OpenAI key in secrets.js first.";
+    chatHistory.push({
+      role: "assistant",
+      content: "Add your OpenAI key in secrets.js first.",
+    });
+    trimChatHistory();
+    saveChatHistory();
+    appendChatLine("assistant", "Add your OpenAI key in secrets.js first.");
     return;
   }
 
-  chatWindow.innerHTML = "Thinking...";
+  appendChatLine("user", message);
+  userInput.value = "";
 
   try {
     const aiReply = await getOpenAIResponse(message);
-    chatWindow.innerHTML = aiReply;
-  } catch (error) {
-    chatWindow.innerHTML = "Something went wrong while calling OpenAI.";
-  }
+    appendChatLine("assistant", aiReply);
 
-  userInput.value = "";
+    chatHistory.push({ role: "assistant", content: aiReply });
+    trimChatHistory();
+    saveChatHistory();
+  } catch (error) {
+    chatHistory.push({
+      role: "assistant",
+      content: "Something went wrong while calling OpenAI.",
+    });
+    trimChatHistory();
+    saveChatHistory();
+    appendChatLine("assistant", "Something went wrong while calling OpenAI.");
+  }
 });

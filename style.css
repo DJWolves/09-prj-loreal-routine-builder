@@ -79,6 +79,29 @@ body {
   overflow-y: auto;
   background: #fafafa;
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-line {
+  max-width: 85%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.assistant-line {
+  align-self: flex-start;
+  background: #ececec;
+  color: #222;
+}
+
+.user-line {
+  align-self: flex-end;
+  background: #111;
+  color: #fff;
 }
 
 /* placeholder message */
